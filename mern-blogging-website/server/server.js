@@ -59,20 +59,17 @@ let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for e
 let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/; // Enhanced password regex
 
 // List all allowed frontend origins (production, preview, local dev)
+const envCORSOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
 const allowedOrigins = [
-  'https://iblog-site-mern-b5u8.vercel.app', // production
-  'https://iblog-site-mern-lovat.vercel.app', // preview
+  ...envCORSOrigins,
   'http://localhost:5173', // local dev (Vite)
   'http://localhost:5174', // local dev (Vite)
-  'http://localhost:3000'  // local dev (React)
 ];
 
 function isAllowedOrigin(origin) {
     if (!origin) return true; // Allow non-browser requests (Postman, curl)
     if (allowedOrigins.includes(origin)) return true;
-    // Allow all Vercel preview domains for main and admin panel
-    if (/^https:\/\/iblog-site-mern(-admin)?-[a-z0-9]+-areebaahmad123s-projects\.vercel\.app$/.test(origin)) return true;
-    return false;
+    return false; // No longer need Vercel specific regex
   }
 
 // CORS middleware (must be before any routes)
@@ -546,7 +543,7 @@ server.post("/api/signup", csrfProtection, csrfErrorHandler, validateSignupInput
             }
         });
         
-        const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-user?token=${verificationToken}`;
+        const verificationLink = `${allowedOrigins[0] || 'http://localhost:5173'}/verify-user?token=${verificationToken}`;
         
         // Send verification email
         try {
@@ -554,14 +551,14 @@ server.post("/api/signup", csrfProtection, csrfErrorHandler, validateSignupInput
                 from: `Islamic Stories <${process.env.ADMIN_EMAIL}>`,
                 to: email,
                 subject: 'Verify your email address',
-                text: `Thank you for signing up! Please verify your email by clicking this link: ${verifyUrl}`,
+                text: `Thank you for signing up! Please verify your email by clicking this link: ${verificationLink}`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2>Welcome to Islamic Stories!</h2>
                         <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
-                        <a href="${verifyUrl}" style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a>
+                        <a href="${verificationLink}" style="background-color: #4CAF50; color: white; padding: 14px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a>
                         <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                        <p>${verifyUrl}</p>
+                        <p>${verificationLink}</p>
                         <p>This link will expire in 24 hours.</p>
                     </div>
                 `
